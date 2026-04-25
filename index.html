@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMPS — Coal Mine Pillar Stability Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:         #080a07;
+  --bg2:        #0d1009;
+  --surface:    #101410;
+  --card:       #131810;
+  --card2:      #171e13;
+  --border:     #222b1c;
+  --border2:    #2d3d24;
+  --border3:    #3a5030;
+
+  --amber:      #d4870a;
+  --amber-bright:#f0a020;
+  --amber-glow: rgba(212,135,10,0.15);
+  --amber-dim:  #5a3a04;
+
+  --green:      #4aba6a;
+  --green-bright:#6dd98a;
+  --green-glow: rgba(74,186,106,0.12);
+  --green-dim:  #0d3018;
+
+  --red:        #d43a3a;
+  --red-bright: #f05050;
+  --red-glow:   rgba(212,58,58,0.15);
+  --red-dim:    #2a0d0d;
+
+  --blue:       #3a90c8;
+  --blue-bright:#5ab8e8;
+  --blue-dim:   #0d2030;
+
+  --text:       #c8d4c0;
+  --text2:      #8a9e80;
+  --text3:      #506048;
+
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Chakra Petch', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--head);
+  font-size: 13px;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(74,186,106,0.03) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(212,135,10,0.04) 0%, transparent 50%);
+}
+
+/* Dot grid overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(100,140,80,0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+header {
+  position: relative;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  overflow: hidden;
+}
+
+header::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--amber-bright), var(--amber));
+}
+
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--amber-dim), transparent 60%);
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  background: var(--amber-dim);
+  border: 1px solid var(--amber);
+  border-radius: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 5px;
+}
+.logo-mark span {
+  background: var(--amber);
+  border-radius: 1px;
+  display: block;
+}
+.logo-mark span:nth-child(3) { background: var(--amber-dim); border: 1px solid var(--amber); }
+
+.header-title {
+  font-family: var(--head);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--amber-bright);
+  line-height: 1;
+}
+.header-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: .06em;
+  margin-top: 3px;
+}
+
+.header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border2);
+  margin: 0 4px;
+}
+
+.header-tags {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.htag {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  padding: 3px 7px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  background: var(--card);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+
+/* Animated corner element */
+.header-corner {
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--text3);
+  letter-spacing: .06em;
+  opacity: .5;
+}
+.blink { animation: blink 1.4s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  height: calc(100vh - 56px);
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   INPUT PANEL
+═══════════════════════════════════════════════ */
+.input-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border2);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.ip-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ip-header-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.ip-header-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.section {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+}
+
+.sec-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-label::before {
+  content: '▸';
+  font-size: 8px;
+}
+
+.field { margin-bottom: 9px; }
+.field:last-child { margin-bottom: 0; }
+
+.field label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-family: var(--head);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text2);
+  letter-spacing: .02em;
+}
+.field label em {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--text3);
+  font-style: normal;
+  letter-spacing: .04em;
+}
+
+.field input[type="number"],
+.field select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  letter-spacing: .04em;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--amber-dim);
+  box-shadow: 0 0 0 3px rgba(212,135,10,.08), inset 0 1px 2px rgba(0,0,0,.3);
+}
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* Override rows */
+.ov-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px 8px;
+}
+.ov-label { font-family: var(--mono); font-size: 9px; color: var(--text3); white-space: nowrap; }
+.ov-row input, .ov-row select {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  outline: none;
+  min-width: 0;
+}
+.ov-row input:focus, .ov-row select:focus { border-color: var(--amber-dim); }
+.ov-row input.ov-rc { width: 38px; }
+.ov-row input.ov-val { width: 54px; }
+.ov-row select { width: 90px; }
+.ov-del {
+  background: none; border: none;
+  color: var(--text3); cursor: pointer;
+  font-size: 12px; padding: 0 2px;
+  margin-left: auto; transition: color .15s;
+}
+.ov-del:hover { color: var(--red-bright); }
+
+/* Run button */
+.run-btn {
+  width: 100%;
+  background: var(--amber);
+  color: #060806;
+  font-family: var(--head);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  padding: 11px 0;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all .15s;
+  box-shadow: 0 2px 12px rgba(212,135,10,.3), 0 1px 0 rgba(255,255,255,.15) inset;
+}
+.run-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 100%);
+}
+.run-btn:hover { background: var(--amber-bright); box-shadow: 0 4px 20px rgba(212,135,10,.5); transform: translateY(-1px); }
+.run-btn:active { transform: translateY(1px); box-shadow: 0 1px 6px rgba(212,135,10,.3); }
+
+.add-ov-btn {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px dashed var(--border2);
+  border-radius: 3px;
+  color: var(--text3);
+  padding: 5px 10px;
+  cursor: pointer;
+  width: 100%;
+  transition: all .15s;
+}
+.add-ov-btn:hover { border-color: var(--border3); color: var(--text2); }
+
+/* ═══════════════════════════════════════════════
+   RESULTS PANEL
+═══════════════════════════════════════════════ */
+.results-panel {
+  overflow-y: auto;
+  padding: 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+}
+.empty-grid {
+  display: grid;
+  grid-template-columns: repeat(4,20px);
+  gap: 4px;
+}
+.empty-cell {
+  width: 20px; height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  opacity: .3;
+}
+.empty-cell:nth-child(4n+2) { background: var(--border); }
+.empty-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* Verdict */
+.verdict {
+  border-radius: 4px;
+  border: 1px solid;
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+  animation: slideIn .35s cubic-bezier(.2,.8,.4,1);
+}
+@keyframes slideIn {
+  from { opacity:0; transform: translateY(-12px); }
+  to   { opacity:1; transform: none; }
+}
+
+.verdict-bar {
+  height: 3px;
+  background: currentColor;
+}
+
+.verdict-body {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.verdict-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.verdict-title {
+  font-family: var(--head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.verdict-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .03em;
+  opacity: .75;
+}
+
+.verdict.vrd-green { border-color: var(--green); background: var(--green-dim); color: var(--green-bright); }
+.verdict.vrd-red   { border-color: var(--red);   background: var(--red-dim);   color: var(--red-bright); }
+.verdict.vrd-amber { border-color: var(--amber);  background: var(--amber-dim); color: var(--amber-bright); }
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat-card.sc-green::before { background: var(--green); }
+.stat-card.sc-blue::before  { background: var(--blue); }
+.stat-card.sc-amber::before { background: var(--amber); }
+.stat-card.sc-red::before   { background: var(--red); }
+
+.stat-val {
+  font-family: var(--head);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-card.sc-green .stat-val { color: var(--green); }
+.stat-card.sc-blue  .stat-val { color: var(--blue); }
+.stat-card.sc-amber .stat-val { color: var(--amber); }
+.stat-card.sc-red   .stat-val { color: var(--red); }
+
+.stat-lbl {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--text3);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Heatmap */
+.hm-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.card-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hm-grid { display: flex; flex-direction: column; gap: 4px; }
+.hm-row  { display: flex; gap: 4px; align-items: center; }
+.hm-ri   { font-family: var(--mono); font-size: 8px; color: var(--text3); width: 18px; text-align: right; flex-shrink: 0; }
+
+.hm-cell {
+  flex: 0 0 54px;
+  height: 42px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  cursor: default;
+  transition: transform .12s, box-shadow .12s;
+  position: relative;
+}
+.hm-cell:hover {
+  transform: scale(1.1);
+  z-index: 20;
+}
+
+.hm-cell .cv { font-size: 10px; font-weight: 400; line-height: 1; }
+.hm-cell .ct { font-size: 7.5px; opacity: .65; margin-top: 2px; letter-spacing: .04em; }
+
+/* Cell variants */
+.c-S {
+  background: rgba(74,186,106,.12);
+  border-color: rgba(74,186,106,.3);
+  color: var(--green-bright);
+}
+.c-S:hover { box-shadow: 0 0 12px rgba(74,186,106,.25); }
+
+.c-A {
+  background: rgba(58,144,200,.12);
+  border-color: rgba(58,144,200,.3);
+  color: var(--blue-bright);
+}
+.c-A:hover { box-shadow: 0 0 12px rgba(58,144,200,.25); }
+
+.c-Y {
+  background: rgba(212,135,10,.12);
+  border-color: rgba(212,135,10,.3);
+  color: var(--amber-bright);
+}
+.c-Y:hover { box-shadow: 0 0 12px rgba(212,135,10,.25); }
+
+.c-F {
+  background: rgba(212,58,58,.15);
+  border-color: rgba(212,58,58,.5);
+  color: var(--red-bright);
+  animation: cellFail .4s ease;
+}
+.c-F:hover { box-shadow: 0 0 14px rgba(212,58,58,.4); }
+.c-F.seed { border-color: #ff5050; box-shadow: 0 0 8px rgba(255,80,80,.3); }
+
+@keyframes cellFail {
+  0%  { transform: scale(1.15); opacity: 0; }
+  100%{ transform: scale(1);    opacity: 1; }
+}
+
+.hm-col-labels { display: flex; gap: 4px; padding-left: 22px; margin-bottom: 3px; }
+.hm-cl { flex: 0 0 54px; text-align: center; font-family: var(--mono); font-size: 8px; color: var(--text3); }
+
+.legend-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--text3);
+  letter-spacing: .04em;
+}
+.leg-dot {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+/* Tooltip */
+.hm-cell::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a2016;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 5px 9px;
+  font-family: var(--mono);
+  font-size: 9px;
+  white-space: nowrap;
+  color: var(--text2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .1s;
+  z-index: 100;
+  letter-spacing: .04em;
+}
+.hm-cell:hover::after { opacity: 1; }
+
+/* BFS Log */
+.log-card {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.log-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.log-body {
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 2;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+
+.lg-step  { color: var(--text2); }
+.lg-enq   { color: var(--blue-bright); padding-left: 18px; }
+.lg-span  { color: var(--amber); padding-left: 18px; }
+.lg-col   { color: var(--red-bright); padding-left: 18px; font-weight: 600; }
+.lg-ok    { color: var(--green); }
+.lg-seed  { color: var(--text3); }
+
+/* Violation list */
+.viol-card {
+  background: var(--red-dim);
+  border: 1px solid rgba(212,58,58,.4);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.viol-list {
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 2;
+  color: var(--red-bright);
+}
+
+/* Per-pillar table */
+.table-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.table-wrap {
+  overflow-x: auto;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+}
+table.pt {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+table.pt th {
+  text-align: right;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text3);
+  font-weight: 400;
+  font-size: 8.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: var(--card2);
+  position: sticky; top: 0;
+}
+table.pt th:first-child { text-align: left; }
+table.pt td {
+  text-align: right;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+table.pt td:first-child { text-align: left; color: var(--text3); }
+table.pt tr:last-child td { border-bottom: none; }
+table.pt tr:hover td { background: rgba(255,255,255,.015); }
+
+/* DGMS table */
+table.dgms {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 10px;
+  margin-top: 8px;
+}
+table.dgms th, table.dgms td {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+table.dgms th { background: var(--card2); color: var(--text3); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 400; }
+table.dgms td { color: var(--text2); }
+table.dgms td.na { color: var(--red-dim); }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+input[type=number]::-webkit-inner-spin-button { opacity: .3; }
+select option { background: #101410; }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="header-logo">
+    <div class="logo-mark">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div>
+      <div class="header-title">Coal Mine Pillar Stability</div>
+      <div class="header-sub">CMRI/Sheorey · Tributary Area · BFS Cascade · DGMS CMR 1957</div>
+    </div>
+  </div>
+  <div class="header-divider"></div>
+  <div class="header-tags">
+    <span class="htag">Reg. 99</span>
+    <span class="htag">Moore 8-N</span>
+    <span class="htag">Brittle Failure</span>
+    <span class="htag">Mark-Bieniawski</span>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+    <div class="header-corner">SYS <span class="blink">█</span></div>
+    <div class="header-corner" id="live-time"></div>
+  </div>
+</header>
+
+<!-- ═══ LAYOUT ═══ -->
+<div class="layout">
+
+  <!-- ── INPUT ── -->
+  <div class="input-panel">
+    <div class="ip-header">
+      <div class="ip-header-dot"></div>
+      <div class="ip-header-label">Parameter Input</div>
+    </div>
+
+    <!-- Grid size -->
+    <div class="section">
+      <div class="sec-label">Grid Dimensions</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Rows <em>1–20</em></label>
+          <input type="number" id="rows" value="4" min="1" max="20">
+        </div>
+        <div class="field">
+          <label>Columns <em>1–20</em></label>
+          <input type="number" id="cols" value="4" min="1" max="20">
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel params -->
+    <div class="section">
+      <div class="sec-label">Panel Parameters</div>
+      <div class="field">
+        <label>H — Depth of cover <em>m · 30–360</em></label>
+        <input type="number" id="H" value="100" min="30" max="360" step="5">
+      </div>
+      <div class="field">
+        <label>g — Gallery width <em>m · 3.0–4.8</em></label>
+        <input type="number" id="g" value="3.6" min="3.0" max="4.8" step="0.1">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>w₁ <em>m</em></label>
+          <input type="number" id="w1" value="22" min="8" max="50" step="0.5">
+        </div>
+        <div class="field">
+          <label>w₂ <em>m</em></label>
+          <input type="number" id="w2" value="22" min="8" max="50" step="0.5">
+        </div>
+      </div>
+      <div class="field">
+        <label>h — Mining height <em>m · 1.8–3.0</em></label>
+        <input type="number" id="h" value="2.0" min="1.8" max="3.0" step="0.1">
+      </div>
+      <div class="field">
+        <label>σc — UCS of coal <em>MPa</em></label>
+        <input type="number" id="sigma_c" value="20" min="4" max="30" step="0.5">
+      </div>
+    </div>
+
+    <!-- Sim params -->
+    <div class="section">
+      <div class="sec-label">Simulation</div>
+      <div class="field">
+        <label>Critical span — roof collapse <em>m</em></label>
+        <input type="number" id="critSpan" value="35" min="15" max="80" step="1">
+      </div>
+    </div>
+
+    <!-- Overrides -->
+    <div class="section">
+      <div class="sec-label">Per-Pillar Overrides</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:10px;line-height:1.6;letter-spacing:.03em;">
+        Override individual cells to model weak zones or varying geology.
+      </div>
+      <div id="ov-list" style="margin-bottom:8px;"></div>
+      <button class="add-ov-btn" onclick="addOverride()">+ Add Override</button>
+    </div>
+
+    <!-- Run -->
+    <div class="section" style="border-bottom:none;">
+      <button class="run-btn" onclick="runSim()">▶ Run Simulation</button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div class="results-panel" id="rp">
+    <div class="empty" id="empty">
+      <div class="empty-grid">
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+        <div class="empty-cell"></div><div class="empty-cell"></div>
+      </div>
+      <div class="empty-text">Configure parameters and run simulation</div>
+    </div>
+    <div id="rc" style="display:none;"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════════
+function tick() {
+  const now = new Date();
+  document.getElementById('live-time').textContent =
+    now.toLocaleTimeString('en-GB',{hour12:false});
+}
+tick(); setInterval(tick, 1000);
+
+// ═══════════════════════════════════════════════════════════
+//  PHYSICS ENGINE
+// ═══════════════════════════════════════════════════════════
+const GAMMA = 0.025;
+const DR = [-1,-1,-1,0,0,1,1,1];
+const DC = [-1,0,1,-1,1,-1,0,1];
+const W_SUM = 4/1 + 4/Math.SQRT2;
+const FC = 1/W_SUM, FD = (1/Math.SQRT2)/W_SUM;
+const WT = [FD,FC,FD,FC,FC,FD,FC,FD];
+
+const markBieniawski = (w1,w2) => (0.9*w1*w2)/Math.sqrt(w1*w1+w2*w2);
+
+const cmriSheorey = (sc,h,H,we) =>
+  0.27*sc*Math.pow(h,-0.36) + (H/250+1)*(we/h-1);
+
+const tributaryLoad = (H,w1,g) =>
+  GAMMA*H*Math.pow((w1+g)/w1,2);
+
+function dgmsMin(H,g) {
+  let row;
+  if      (H<=60)  row=[12,15,18,19.5];
+  else if (H<=90)  row=[13.5,16.5,19.5,21];
+  else if (H<=150) row=[16.5,19.5,22.5,25.5];
+  else if (H<=240) row=[22.5,25.5,30.5,34.5];
+  else if (H<=360) row=[30.5,-1,-1,-1];
+  else             return -1;
+  if (g<=3.0) return row[0]; if (g<=3.6) return row[1];
+  if (g<=4.2) return row[2]; if (g<=4.8) return row[3];
+  return -1;
+}
+
+function classify(sf) {
+  if (sf>=2.0) return 'S'; if (sf>=1.5) return 'A';
+  if (sf>=1.0) return 'Y'; return 'F';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  OVERRIDES UI
+// ═══════════════════════════════════════════════════════════
+let ovId = 0;
+function addOverride() {
+  const id = ovId++;
+  const d = document.createElement('div');
+  d.className = 'ov-row'; d.id = `ov${id}`;
+  d.innerHTML = `
+    <span class="ov-label">Row</span>
+    <input type="number" class="ov-rc" placeholder="0" min="0">
+    <span class="ov-label">Col</span>
+    <input type="number" class="ov-rc" placeholder="0" min="0">
+    <select>
+      <option value="sigma_c">σc (MPa)</option>
+      <option value="H">H (m)</option>
+      <option value="h">h (m)</option>
+      <option value="g">g (m)</option>
+      <option value="w1">w₁ (m)</option>
+      <option value="w2">w₂ (m)</option>
+    </select>
+    <span class="ov-label">=</span>
+    <input type="number" class="ov-val" placeholder="val">
+    <button class="ov-del" onclick="document.getElementById('ov${id}').remove()">✕</button>`;
+  document.getElementById('ov-list').appendChild(d);
+}
+
+function getOverrides() {
+  return [...document.querySelectorAll('.ov-row')].map(d => {
+    const ins = d.querySelectorAll('input');
+    const r = parseInt(ins[0].value), c = parseInt(ins[1].value);
+    const param = d.querySelector('select').value;
+    const val = parseFloat(ins[2].value);
+    return (!isNaN(r)&&!isNaN(c)&&!isNaN(val)) ? {r,c,param,val} : null;
+  }).filter(Boolean);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SIMULATION
+// ═══════════════════════════════════════════════════════════
+function runSim() {
+  const rows = +document.getElementById('rows').value;
+  const cols = +document.getElementById('cols').value;
+  const H=+document.getElementById('H').value, g=+document.getElementById('g').value;
+  const w1=+document.getElementById('w1').value, w2=+document.getElementById('w2').value;
+  const h=+document.getElementById('h').value, sc=+document.getElementById('sigma_c').value;
+  const crit=+document.getElementById('critSpan').value;
+
+  // Build grid
+  const grid=[];
+  for(let i=0;i<rows;i++){
+    grid.push([]);
+    for(let j=0;j<cols;j++)
+      grid[i].push({r:i,c:j,H,g,w1,w2,h,sigma_c:sc,
+                    we:0,Sp:0,P:0,SF:0,failed:false,enqueued:false,
+                    failStep:-1,status:'S',isOv:false,isCas:false});
+  }
+  for(const ov of getOverrides())
+    if(ov.r<rows&&ov.c<cols){ grid[ov.r][ov.c][ov.param]=ov.val; grid[ov.r][ov.c].isOv=true; }
+
+  // Phase 1: DGMS — two distinct violation types
+  const viols=[];
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++){
+    const p=grid[i][j];
+    const minCC=dgmsMin(p.H,p.g), actCC=p.w1+p.g;
+    if(minCC<0)
+      // Gallery width not permitted at this depth (e.g. g>3.0 m when H>240 m)
+      viols.push({i,j,type:'not_permitted',minCC,actCC,H:p.H,g:p.g});
+    else if(actCC<minCC)
+      // Gallery permitted, but c-c spacing is too small
+      viols.push({i,j,type:'spacing',minCC,actCC,H:p.H,g:p.g});
+  }
+  if(viols.length){ renderViolation(viols,rows,cols); return; }
+
+  // Phase 2: static
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++){
+    const p=grid[i][j];
+    p.we=markBieniawski(p.w1,p.w2);
+    p.Sp=cmriSheorey(p.sigma_c,p.h,p.H,p.we);
+    p.P=tributaryLoad(p.H,p.w1,p.g);
+    p.SF=p.Sp/p.P;
+    p.status=classify(p.SF);
+    p.failed=(p.SF<1.0);
+  }
+
+  let anyFailed=false;
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++) if(grid[i][j].failed) anyFailed=true;
+  if(!anyFailed){ renderSafe(grid,rows,cols); return; }
+
+  // Phase 3: BFS
+  const log=[];
+  const queue=[];
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++)
+    if(grid[i][j].failed&&!grid[i][j].enqueued){
+      grid[i][j].enqueued=true; grid[i][j].failStep=0;
+      queue.push([i,j]);
+    }
+  log.push({t:'seed',n:queue.length});
+
+  let qi=0,step=0,collapsed=false;
+  while(qi<queue.length){
+    const [ci,cj]=queue[qi++]; step++;
+    const fp=grid[ci][cj], shed=fp.P;
+    const nbrs=[];
+    for(let k=0;k<8;k++){
+      const ni=ci+DR[k],nj=cj+DC[k];
+      if(ni<0||ni>=rows||nj<0||nj>=cols) continue;
+      const nb=grid[ni][nj];
+      if(nb.failed) continue;
+      nb.P+=WT[k]*shed; nb.SF=nb.Sp/nb.P;
+      nb.status=classify(nb.SF);
+      if(nb.SF<1&&!nb.enqueued){
+        nb.failed=true;nb.enqueued=true;nb.failStep=step;nb.isCas=true;
+        queue.push([ni,nj]); nbrs.push({ni,nj,sf:nb.SF});
+      }
+    }
+    let rMin=rows,rMax=-1,cMin=cols,cMax=-1;
+    for(let i=0;i<rows;i++) for(let j=0;j<cols;j++)
+      if(grid[i][j].failed){
+        rMin=Math.min(rMin,i);rMax=Math.max(rMax,i);
+        cMin=Math.min(cMin,j);cMax=Math.max(cMax,j);
+      }
+    const sp=grid[0][0], spacing=sp.w1+sp.g;
+    const span=Math.max(rMax-rMin+1,cMax-cMin+1)*spacing;
+    log.push({t:'step',step,ci,cj,shed,nbrs,span,crit});
+    if(span>crit){ log.push({t:'col',span,crit,step}); collapsed=true; break; }
+  }
+  if(!collapsed) log.push({t:'end'});
+  renderCascade(grid,rows,cols,log,collapsed,crit);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDERERS
+// ═══════════════════════════════════════════════════════════
+function show(html){
+  document.getElementById('empty').style.display='none';
+  const rc=document.getElementById('rc');
+  rc.style.display='block'; rc.innerHTML=html;
+}
+
+function heatmap(grid,rows,cols){
+  const cw = Math.max(36,Math.min(58,Math.floor(520/cols)));
+  const ch = Math.round(cw*0.78);
+
+  let col='<div class="hm-col-labels">';
+  for(let j=0;j<cols;j++) col+=`<div class="hm-cl" style="flex:0 0 ${cw}px">C${j}</div>`;
+  col+='</div>';
+
+  let rows_h='';
+  for(let i=0;i<rows;i++){
+    rows_h+=`<div class="hm-row"><div class="hm-ri">R${i}</div>`;
+    for(let j=0;j<cols;j++){
+      const p=grid[i][j];
+      const cl='c-'+p.status+(p.failed&&!p.isCas?' seed':p.isCas?' cas':'');
+      const tag={S:'SAFE',A:'ACCP',Y:'YELD',F:p.failStep===0?'SEED':'FAIL'}[p.status];
+      const tip=`(${i},${j}) we=${p.we.toFixed(2)}m Sp=${p.Sp.toFixed(3)} P=${p.P.toFixed(3)} SF=${p.SF.toFixed(3)}${p.isOv?' ★':''}`;
+      rows_h+=`<div class="hm-cell ${cl}" style="flex:0 0 ${cw}px;height:${ch}px" data-tip="${tip}">
+        <div class="cv">${p.SF.toFixed(2)}</div>
+        <div class="ct">${tag}</div>
+      </div>`;
+    }
+    rows_h+='</div>';
+  }
+
+  return `<div class="hm-card">
+    <div class="card-label"><span>Safety Factor Heatmap</span><span>${rows}×${cols} pillars · hover for details</span></div>
+    ${col}
+    <div class="hm-grid">${rows_h}</div>
+    <div class="legend-row">
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(74,186,106,.2);border-color:rgba(74,186,106,.5)"></div>Safe ≥2.0</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(58,144,200,.2);border-color:rgba(58,144,200,.5)"></div>Acceptable 1.5–2.0</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(212,135,10,.2);border-color:rgba(212,135,10,.5)"></div>Yield 1.0–1.5</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(212,58,58,.2);border-color:#ff5050"></div>Seed failure</div>
+      <div class="leg-item"><div class="leg-dot" style="background:rgba(212,58,58,.2);border-color:rgba(212,58,58,.6)"></div>Cascade failure</div>
+    </div>
+  </div>`;
+}
+
+function stats(grid,rows,cols){
+  let nS=0,nA=0,nY=0,nF=0;
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++){
+    const s=grid[i][j].status;
+    if(s==='S')nS++;else if(s==='A')nA++;else if(s==='Y')nY++;else nF++;
+  }
+  return `<div class="stats-row">
+    <div class="stat-card sc-green"><div class="stat-val">${nS}</div><div class="stat-lbl">Safe</div></div>
+    <div class="stat-card sc-blue"><div class="stat-val">${nA}</div><div class="stat-lbl">Acceptable</div></div>
+    <div class="stat-card sc-amber"><div class="stat-val">${nY}</div><div class="stat-lbl">Yield zone</div></div>
+    <div class="stat-card sc-red"><div class="stat-val">${nF}</div><div class="stat-lbl">Failed</div></div>
+  </div>`;
+}
+
+function pillarTable(grid,rows,cols){
+  let rows_h='';
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++){
+    const p=grid[i][j];
+    const colors={S:'var(--green)',A:'var(--blue)',Y:'var(--amber)',F:'var(--red)'};
+    const col=colors[p.status];
+    rows_h+=`<tr>
+      <td>(${i},${j})${p.isOv?' ★':''}</td>
+      <td>${p.we.toFixed(3)}</td><td>${p.Sp.toFixed(3)}</td>
+      <td>${p.P.toFixed(3)}</td>
+      <td style="color:${col};font-weight:600">${p.SF.toFixed(3)}</td>
+      <td style="color:${col}">${{S:'SAFE',A:'ACCEPTABLE',Y:'YIELD',F:'FAILED'}[p.status]}</td>
+      <td>${p.failStep>=0?p.failStep:'—'}</td>
+    </tr>`;
+  }
+  return `<div class="table-card">
+    <div class="card-label" style="padding:8px 14px;border-bottom:1px solid var(--border);">
+      <span style="font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">Per-Pillar Detail</span>
+    </div>
+    <div class="table-wrap">
+    <table class="pt">
+      <thead><tr><th>Pillar</th><th>we (m)</th><th>Sp (MPa)</th><th>P (MPa)</th><th>SF</th><th>Status</th><th>Fail step</th></tr></thead>
+      <tbody>${rows_h}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function verdict(cls,icon,title,sub){
+  return `<div class="verdict ${cls}" style="animation:slideIn .35s cubic-bezier(.2,.8,.4,1)">
+    <div class="verdict-body">
+      <div class="verdict-icon">${icon}</div>
+      <div><div class="verdict-title">${title}</div><div class="verdict-sub">${sub}</div></div>
+    </div>
+  </div>`;
+}
+
+// ── Non-compliant ──────────────────────────────
+function renderViolation(viols,rows,cols){
+  // Count by type
+  const nNP = viols.filter(v=>v.type==='not_permitted').length;
+  const nSP = viols.filter(v=>v.type==='spacing').length;
+
+  let vl='';
+  for(const v of viols){
+    if(v.type==='not_permitted'){
+      // Gallery is simply not allowed at this depth — no "required" c-c exists
+      const maxG = v.H<=360 ? 3.0 : '—';
+      vl+=`<div>Pillar(${v.i},${v.j})  ·  g = ${v.g} m  <span style="color:var(--red-bright)">not permitted</span> at H = ${v.H} m
+        &nbsp;·&nbsp; At this depth, only g ≤ ${maxG} m is allowed (DGMS 241–360 m row)</div>`;
+    } else {
+      // Normal spacing violation — c-c too small
+      const def=(v.minCC-v.actCC).toFixed(1);
+      vl+=`<div>Pillar(${v.i},${v.j})  ·  c-c = ${v.actCC.toFixed(1)} m  &lt;  required ${v.minCC} m
+        &nbsp;·&nbsp; deficit: <span style="color:var(--red-bright)">${def} m</span>  (H = ${v.H} m, g = ${v.g} m)</div>`;
+    }
+  }
+  const subMsg = [nNP?`${nNP} gallery-width violation(s)`:'', nSP?`${nSP} c-c spacing violation(s)`:''].filter(Boolean).join(' · ');
+  show(`
+    ${verdict('vrd-red','⛔','DGMS Reg. 99 Violation — Simulation Halted', subMsg + '. Panel redesign required.')}
+    <div class="viol-card">
+      <div class="log-header" style="background:rgba(212,58,58,.15);border-color:rgba(212,58,58,.3)">Violations — CMR 1957 Regulation 99</div>
+      <div class="viol-list">${vl}</div>
+      <div style="padding:8px 14px 12px;font-family:var(--mono);font-size:9px;color:var(--text3);line-height:1.8;letter-spacing:.03em;">
+        No SF calculation is valid on an illegally dimensioned panel.<br>
+        For spacing violations: increase w₁ so that <strong style="color:var(--text2)">w₁ + g ≥ required c-c</strong>.<br>
+        For gallery-width violations: reduce g to ≤ 3.0 m (only permitted gallery at H &gt; 240 m).
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="log-header">DGMS Reg. 99 — Minimum c-c Spacing (m)</div>
+      <table class="dgms">
+        <thead><tr><th>Depth (m)</th><th>g ≤ 3.0</th><th>g ≤ 3.6</th><th>g ≤ 4.2</th><th>g ≤ 4.8</th></tr></thead>
+        <tbody>
+          <tr><td>≤ 60</td><td>12.0</td><td>15.0</td><td>18.0</td><td>19.5</td></tr>
+          <tr><td>61–90</td><td>13.5</td><td>16.5</td><td>19.5</td><td>21.0</td></tr>
+          <tr><td>91–150</td><td>16.5</td><td>19.5</td><td>22.5</td><td>25.5</td></tr>
+          <tr><td>151–240</td><td>22.5</td><td>25.5</td><td>30.5</td><td>34.5</td></tr>
+          <tr><td>241–360</td><td>30.5</td><td class="na">—</td><td class="na">—</td><td class="na">—</td></tr>
+        </tbody>
+      </table>
+    </div>`);
+}
+
+// ── Safe ──────────────────────────────────────
+function renderSafe(grid,rows,cols){
+  let mn=Infinity;
+  for(let i=0;i<rows;i++) for(let j=0;j<cols;j++) mn=Math.min(mn,grid[i][j].SF);
+  show(`
+    ${verdict('vrd-green','✅','All Pillars Stable — No Cascade Triggered',`DGMS compliant. Min SF = ${mn.toFixed(3)}. BFS not required.`)}
+    ${stats(grid,rows,cols)}
+    ${heatmap(grid,rows,cols)}
+    ${pillarTable(grid,rows,cols)}`);
+}
+
+// ── Cascade ───────────────────────────────────
+function renderCascade(grid,rows,cols,log,collapsed,crit){
+  let lg='';
+  for(const e of log){
+    if(e.t==='seed') lg+=`<div class="lg-seed">Seeded ${e.n} initial failure(s) into BFS queue.</div>`;
+    else if(e.t==='step'){
+      lg+=`<div class="lg-step">[Step ${String(e.step).padStart(2,' ')}] Pillar(${e.ci},${e.cj})  P_shed = ${e.shed.toFixed(3)} MPa</div>`;
+      for(const n of e.nbrs) lg+=`<div class="lg-enq">→ (${n.ni},${n.nj})  new SF = ${n.sf.toFixed(3)}  ENQUEUED</div>`;
+      lg+=`<div class="lg-span">   cluster span = ${e.span.toFixed(1)} m  /  critical = ${e.crit} m</div>`;
+    } else if(e.t==='col')
+      lg+=`<div class="lg-col">!!! MASSIVE ROOF COLLAPSE  ·  span ${e.span.toFixed(1)} m > ${e.crit} m  ·  step ${e.step}</div>`;
+    else if(e.t==='end')
+      lg+=`<div class="lg-ok">BFS complete — cluster contained. No massive collapse.</div>`;
+  }
+
+  const vrd = collapsed
+    ? verdict('vrd-red','⚠️','Massive Roof Collapse Detected',`Failed cluster span exceeded critical threshold of ${crit} m.`)
+    : verdict('vrd-amber','⚡','Localised Failure — Cascade Contained',`Cluster span below critical threshold of ${crit} m. No massive collapse.`);
+
+  show(`${vrd}${stats(grid,rows,cols)}${heatmap(grid,rows,cols)}
+    <div class="log-card">
+      <div class="log-header">
+        <span style="color:var(--amber)">▸</span> BFS Cascade Log
+      </div>
+      <div class="log-body">${lg}</div>
+    </div>
+    ${pillarTable(grid,rows,cols)}`);
+}
+</script>
+</body>
+</html>
